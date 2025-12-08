@@ -77,9 +77,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/
 })
 
 local Button = Tab:CreateButton({
-   Name = "Fling or Spin",
+   Name = "Admin Gui",
    Callback = function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/PlayerYeep/villager4415hub/refs/heads/main/fling.lua", true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/PlayerYeep/villager4415hub/refs/heads/main/ADMINGUI.lua"))()
    -- The function that takes place when the button is pressed
    end,
 })

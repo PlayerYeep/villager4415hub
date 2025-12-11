@@ -4,36 +4,44 @@ local LocalPlayer = Players.LocalPlayer
 -- Variable to track the state of invisibility
 local isInvisible = false
 
--- Function to make the character parts and accessories transparent/visible
+-- List of all common R6 and R15 character parts
+local CHARACTER_PARTS = {
+    -- R6 Parts
+    "Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg",
+    -- R15 Parts
+    "UpperTorso", "LowerTorso", "LeftUpperArm", "LeftLowerArm", "LeftHand", 
+    "RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", 
+    "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"
+}
+
+-- Function to make the character parts and accessories invisible (Transparency = 1)
 local function setInvisibility(char, isEnabled)
-    if not char then return end
+    if not char or not char:FindFirstChild("Humanoid") then return end
 
     -- 1 means invisible, 0 means visible
+    -- We use LocalTransparencyModifier for reliability
     local transparencyValue = isEnabled and 1 or 0
     
-    -- Loop through all children and descendants of the character model
-    -- Using GetDescendants() is more thorough than GetChildren() for accessories
+    -- 1. Target all known body parts explicitly
+    for _, partName in ipairs(CHARACTER_PARTS) do
+        local part = char:FindFirstChild(partName)
+        if part and part:IsA("BasePart") then
+            part.LocalTransparencyModifier = transparencyValue
+        end
+    end
+    
+    -- 2. Loop through descendants to catch Accessories, Clothing, and faces
     for _, child in ipairs(char:GetDescendants()) do
-        -- Handle all BaseParts (Head, Torso, Limbs in R6/R15)
-        if child:IsA("BasePart") then
-            -- Skip the HumanoidRootPart as it is not visible by default, 
-            -- and sometimes forcing it to Transparency=1 can cause issues.
-            if child.Name ~= "HumanoidRootPart" then
-                child.Transparency = transparencyValue
-            end
-        -- Handle Decals (often used for faces/clothing)
-        elseif child:IsA("Decal") then
-            -- Decals don't have Transparency, but their parent part does.
-            -- This ensures the face is targeted if it's a direct child of a part.
+        -- Catch any parts not in the explicit list (e.g., layered clothing, hats, tools)
+        if child:IsA("BasePart") and child.Name ~= "HumanoidRootPart" then
+            child.LocalTransparencyModifier = transparencyValue
+        -- Catch faces (Decals)
+        elseif child:IsA("Decal") and child.Name == "face" then
+            -- Setting the part's LocalTransparencyModifier makes the decal invisible
             if child.Parent and child.Parent:IsA("BasePart") then
-                child.Parent.Transparency = transparencyValue
+                child.Parent.LocalTransparencyModifier = transparencyValue
             end
         end
-        
-        -- Special handling for accessories, whose 'Handle' is a BasePart
-        -- The main loop's BasePart check already covers this if we used GetDescendants
-        -- but this explicit check can also be useful if we stick to GetChildren.
-        -- We'll rely on GetDescendants and the BasePart check for simplicity.
     end
 end
 
@@ -43,8 +51,8 @@ local function toggleInvisibility()
     
     local currentCharacter = LocalPlayer.Character
     if currentCharacter then
-        -- Force the character to load all appearance parts before setting transparency
-        task.wait(0.2) -- The crucial fix: wait for a fraction of a second for parts to appear
+        -- Wait a small amount for the character to finish loading completely
+        task.wait(0.1) 
         setInvisibility(currentCharacter, isInvisible)
     end
     
@@ -57,9 +65,7 @@ end
 
 -- Function to handle initial load and respawns
 local function onCharacterAdded(char)
-    -- *** UPDATED FIX HERE: ***
-    -- Wait a moment for character parts, accessories, and clothing to fully load.
-    -- task.wait(0.2) is a common fix to ensure all parts have loaded before applying the script.
+    -- Crucial wait after character respawns to ensure all parts (especially accessories) are present
     task.wait(0.2) 
     
     -- If the feature is currently enabled, re-apply it on respawn
